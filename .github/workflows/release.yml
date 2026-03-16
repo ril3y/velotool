@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goarch: amd64
+            cc: gcc
+            artifact: velotool-linux-amd64
+          - goarch: arm64
+            cc: aarch64-linux-gnu-gcc
+            artifact: velotool-linux-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev
+          if [ "${{ matrix.goarch }}" = "arm64" ]; then
+            sudo dpkg --add-architecture arm64
+            sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs) main restricted universe" | sudo tee /etc/apt/sources.list.d/arm64.list
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+            sudo apt-get update
+            sudo apt-get install -y gcc-aarch64-linux-gnu libusb-1.0-0-dev:arm64
+          fi
+
+      - name: Build
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          CC: ${{ matrix.cc }}
+        run: |
+          if [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          fi
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o ${{ matrix.artifact }} .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-libusb mingw-w64-x86_64-pkg-config mingw-w64-x86_64-gcc
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          export CGO_ENABLED=1
+          export GOOS=windows
+          export GOARCH=amd64
+          export CC=gcc
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o velotool.exe .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velotool-windows-amd64
+          path: velotool.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install libusb
+        run: brew install libusb
+
+      - name: Build
+        env:
+          CGO_ENABLED: 1
+          GOOS: darwin
+          GOARCH: arm64
+        run: go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o velotool-darwin-arm64 .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velotool-darwin-arm64
+          path: velotool-darwin-arm64
+
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          cp artifacts/velotool-linux-amd64/velotool-linux-amd64 release/
+          cp artifacts/velotool-linux-arm64/velotool-linux-arm64 release/
+          cp artifacts/velotool-windows-amd64/velotool.exe release/
+          cp artifacts/velotool-darwin-arm64/velotool-darwin-arm64 release/
+          chmod +x release/velotool-linux-* release/velotool-darwin-*
+          cd release && sha256sum * > checksums.sha256
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/velotool-linux-amd64
+            release/velotool-linux-arm64
+            release/velotool.exe
+            release/velotool-darwin-arm64
+            release/checksums.sha256
