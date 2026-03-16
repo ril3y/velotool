@@ -33,9 +33,27 @@ jobs:
           sudo apt-get install -y libusb-1.0-0-dev
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
             sudo dpkg --add-architecture arm64
-            sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
-            echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs) main restricted universe" | sudo tee /etc/apt/sources.list.d/arm64.list
-            echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+            # Ubuntu 24.04 uses DEB822 format in /etc/apt/sources.list.d/ubuntu.sources
+            # We need to add arch= filters and arm64 ports sources.
+            # First, restrict existing sources to amd64 only.
+            if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+              sudo sed -i 's/^Architectures:.*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
+              # If no Architectures line exists, add one after each Types line
+              sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+              # Remove duplicate Architectures lines
+              sudo awk '!seen[$0]++ || !/^Architectures:/' /etc/apt/sources.list.d/ubuntu.sources > /tmp/ubuntu.sources
+              sudo mv /tmp/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources
+            fi
+            if [ -f /etc/apt/sources.list ]; then
+              sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+            fi
+            # Add arm64 sources from ports.ubuntu.com (includes security)
+            CODENAME=$(lsb_release -cs)
+            cat <<SOURCES | sudo tee /etc/apt/sources.list.d/arm64-ports.list
+          deb [arch=arm64] http://ports.ubuntu.com/ ${CODENAME} main restricted universe
+          deb [arch=arm64] http://ports.ubuntu.com/ ${CODENAME}-updates main restricted universe
+          deb [arch=arm64] http://ports.ubuntu.com/ ${CODENAME}-security main restricted universe
+          SOURCES
             sudo apt-get update
             sudo apt-get install -y gcc-aarch64-linux-gnu libusb-1.0-0-dev:arm64
           fi
@@ -65,6 +83,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+        id: setup-go
 
       - uses: msys2/setup-msys2@v2
         with:
@@ -73,8 +92,21 @@ jobs:
 
       - name: Build
         shell: msys2 {0}
+        env:
+          GOROOT: ${{ steps.setup-go.outputs.GOPATH }}
         run: |
-          export PATH="/mingw64/bin:$PATH"
+          # Find Go binary installed by actions/setup-go
+          GOBIN=$(cygpath "$RUNNER_TOOL_CACHE"/go/1.24*/x64/bin 2>/dev/null || echo "")
+          if [ -z "$GOBIN" ] || [ ! -f "$GOBIN/go.exe" ]; then
+            # Fallback: search common locations
+            for p in "/c/hostedtoolcache/windows/go/"*/x64/bin; do
+              if [ -f "$p/go.exe" ]; then
+                GOBIN="$p"
+                break
+              fi
+            done
+          fi
+          export PATH="$GOBIN:/mingw64/bin:$PATH"
           export CGO_ENABLED=1
           export GOOS=windows
           export GOARCH=amd64

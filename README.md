@@ -22,7 +22,7 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 - Embeds the DDR loader — no separate files needed
 - Automatically detects maskrom mode and initializes the device
 - Knows all 28 VeloCore partitions by name
-- Chunked 64 KB transfers that don't crash the loader
+- Reliable 64 KB chunked transfers with automatic retry
 - Full device backup with SHA-256 verification
 - Flash profiles for common operations (root, stock restore)
 - Progress bars with transfer rates
@@ -241,10 +241,10 @@ velotool implements the Rockchip USB protocol:
 
 ### Chunked Transfers
 
-The VeloCore's Rockchip loader is known to crash on large USB transfers. velotool handles this with:
+velotool uses chunked transfers for reliability:
 
 - 64 KB (128 sector) chunks per USB transaction
-- Automatic retry (3 attempts per chunk)
+- Automatic retry (3 attempts per chunk on failure)
 - Progress reporting with transfer rates
 
 ## Building from Source
