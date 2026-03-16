@@ -2,7 +2,7 @@
 
 A cross-platform USB flash tool for the **Bowflex VeloCore** indoor cycling bike, built around the Rockchip RK3399 SoC.
 
-Reads, writes, and backs up eMMC partitions over USB using the Rockchip maskrom/loader protocol. The DDR loader binary is embedded — just plug in USB and go.
+Reads, writes, and backs up eMMC partitions over USB using the Rockchip maskrom/loader protocol. The DDR loader binary is embedded - just plug in USB and go.
 
 ```
  ██╗   ██╗███████╗██╗      ██████╗ ████████╗ ██████╗  ██████╗ ██╗
@@ -19,7 +19,7 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 
 **velotool** solves all of this in a single binary:
 
-- Embeds the DDR loader — no separate files needed
+- Embeds the DDR loader - no separate files needed
 - Automatically detects maskrom mode and initializes the device
 - Knows all 28 VeloCore partitions by name
 - Reliable 64 KB chunked transfers with automatic retry
@@ -34,7 +34,7 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 
 ### Prerequisites
 
-- Back cover of the VeloCore console removed to access the RK3399 board's **micro USB OTG port** — this is the only USB port that supports flashing. The external USB ports on the bike cannot be used.
+- Back cover of the VeloCore console removed to access the RK3399 board's **micro USB OTG port** - this is the only USB port that supports flashing. The external USB ports on the bike cannot be used.
 - **Short** USB cable (under 1 meter) connected between the board's micro USB OTG port and your computer
 - Device in **[Maskrom mode](#entering-maskrom-mode)**
 - On Windows: [WinUSB driver](https://zadig.akeo.ie/) installed via Zadig for the Rockchip device (**untested**)
@@ -77,7 +77,7 @@ velotool reset
 
 ## Commands
 
-### `detect` — Find Device
+### `detect` - Find Device
 
 Scans USB for Rockchip RK3399 devices and shows mode, bus address, and chip info.
 
@@ -94,7 +94,7 @@ $ velotool detect
 
 If the device is in Maskrom mode, velotool automatically downloads the embedded DDR loader before any read/write operation. No manual step required.
 
-### `read` — Read Partition
+### `read` - Read Partition
 
 Reads an eMMC partition to a local file.
 
@@ -106,7 +106,7 @@ velotool read vbmeta_b vbmeta_backup.img
 velotool read --lba 0x6000 --sectors 8192 dump.img dummy
 ```
 
-### `flash` — Write Partition
+### `flash` - Write Partition
 
 Writes a local image file to an eMMC partition. Validates file size against partition boundaries.
 
@@ -115,9 +115,9 @@ velotool flash uboot_b uboot_b.img
 velotool flash vbmeta_b vbmeta_b.img -y   # skip confirmation
 ```
 
-### `flash-all` — Multi-Partition Flash
+### `flash-all` - Multi-Partition Flash
 
-Flashes multiple partitions in sequence using a manifest file. The manifest is a plain text file with one entry per line — partition name and image file, separated by whitespace. Blank lines and lines starting with `#` are ignored.
+Flashes multiple partitions in sequence using a manifest file. The manifest is a plain text file with one entry per line - partition name and image file, separated by whitespace. Blank lines and lines starting with `#` are ignored.
 
 **Example manifest** (`flash.txt`):
 
@@ -137,7 +137,7 @@ velotool flash-all flash.txt -y   # skip confirmation
 
 Image paths are resolved relative to the manifest file's directory, so you can keep the manifest alongside the images. All entries are validated (partition names and file existence) before any writes begin.
 
-### `backup` — Full Device Backup
+### `backup` - Full Device Backup
 
 Dumps every partition to individual `.img` files with SHA-256 checksums.
 
@@ -149,12 +149,12 @@ velotool backup ./velocore_backup/ --skip userdata,oem_a,oem_b  # skip multiple
 
 Generates:
 - Individual partition images (`uboot_a.img`, `system_b.img`, etc.)
-- `manifest.json` — structured backup metadata with checksums
-- `checksums.sha256` — standard checksum file for `sha256sum -c`
+- `manifest.json` - structured backup metadata with checksums
+- `checksums.sha256` - standard checksum file for `sha256sum -c`
 
 Checks free disk space before starting and refuses if there isn't enough room.
 
-### `partitions` — Partition Table & Live Scan
+### `partitions` - Partition Table & Live Scan
 
 Lists all 28 VeloCore partitions. When a device is connected, performs live analysis:
 
@@ -169,7 +169,7 @@ Live scan identifies:
 - **Security**: LUKS encryption detection
 - **Entropy analysis**: Shannon entropy per partition (detects encryption/compression)
 
-### `reset` — Reboot Device
+### `reset` - Reboot Device
 
 ```bash
 velotool reset
@@ -179,7 +179,7 @@ Triggers normal boot: BootROM → loader → U-Boot → Android.
 
 ## Partition Layout
 
-The VeloCore has A/B partition slots, though it always boots from **Slot B** in practice. Slot A contains a vanilla Rockchip/Google system with no Nautilus apps — it exists as a fallback but the device never switches to it during normal operation.
+The VeloCore has A/B partition slots, though it always boots from **Slot B** in practice. Slot A contains a vanilla Rockchip/Google system with no Nautilus apps - it exists as a fallback but the device never switches to it during normal operation.
 
 | Partition | Start LBA | Size | Description |
 |-----------|-----------|------|-------------|
@@ -222,9 +222,9 @@ Power On → BootROM (maskrom) → idbloader → TF-A (trust) → U-Boot → ker
 
 When the device is in **Maskrom mode** (recovery button held during reset), the BootROM exposes a USB interface that accepts control transfers. velotool uses this to:
 
-1. **Send DDR init** (471) — initializes LPDDR3 memory via USB control transfers
-2. **Send USB plug** (472) — loads the Rockchip USB handler into DRAM
-3. **Bulk operations** — the USB plug accepts standard CBW/CSW commands for LBA read/write
+1. **Send DDR init** (471) - initializes LPDDR3 memory via USB control transfers
+2. **Send USB plug** (472) - loads the Rockchip USB handler into DRAM
+3. **Bulk operations** - the USB plug accepts standard CBW/CSW commands for LBA read/write
 
 This entire sequence happens automatically when you run any read/write command on a device in Maskrom mode.
 
@@ -296,7 +296,7 @@ To flash or read the VeloCore's eMMC, the RK3399 must be in **Maskrom mode**. Th
 
 ### What You Need
 
-- A **short** USB-A to micro USB cable — **under 1 meter recommended**. Long cables cause transfer errors.
+- A **short** USB-A to micro USB cable - **under 1 meter recommended**. Long cables cause transfer errors.
 - Access to the RK3399 board inside the bike's console housing (back cover removed)
 - A computer running velotool (Raspberry Pi works great for a dedicated flash station)
 
@@ -304,8 +304,8 @@ To flash or read the VeloCore's eMMC, the RK3399 must be in **Maskrom mode**. Th
 
 1. Power off the bike and unplug it
 2. Remove the rear cover of the touchscreen console (4-6 screws depending on revision)
-3. Locate the RK3399 board — it's the main board behind the display
-4. Identify the **micro USB OTG port** (used for flashing — the external USB ports on the bike will not work) and the **reset/recovery buttons**
+3. Locate the RK3399 board - it's the main board behind the display
+4. Identify the **micro USB OTG port** (used for flashing - the external USB ports on the bike will not work) and the **reset/recovery buttons**
 
 ### Board Layout
 
@@ -319,7 +319,7 @@ The photo above shows the VeloCore's RK3399 board with the console cover removed
 2. **Hold the recovery button** (bottom circle in the photo above)
 3. While still holding recovery, **press and release the reset button** (top circle), or plug in the bike's power
 4. **Continue holding recovery for ~5 seconds**, then release
-5. The board is now in Maskrom mode — the display will remain blank (no boot)
+5. The board is now in Maskrom mode - the display will remain blank (no boot)
 
 ### Verify
 
@@ -343,11 +343,11 @@ Bus 001 Device 005: ID 2207:330c Fuzhou Rockchip Electronics Company RK3399 in M
 
 ### Tips
 
-- If `velotool detect` shows nothing, try a different USB cable — some cables are charge-only, and long cables cause unreliable transfers
+- If `velotool detect` shows nothing, try a different USB cable - some cables are charge-only, and long cables cause unreliable transfers
 - On Linux, you may need `sudo` or a udev rule for USB access
 - On Windows, install the **WinUSB** driver via [Zadig](https://zadig.akeo.ie/) for the "Rockchip" device
 - If the device becomes unresponsive after a failed transfer, **unplug power completely**, wait 5 seconds, then repeat the Maskrom entry procedure
-- A Raspberry Pi connected directly to the bike makes a great permanent flash station — SSH in and run velotool remotely
+- A Raspberry Pi connected directly to the bike makes a great permanent flash station - SSH in and run velotool remotely
 
 ## Global Flags
 
@@ -367,7 +367,7 @@ Bus 001 Device 005: ID 2207:330c Fuzhou Rockchip Electronics Company RK3399 in M
 ### Transfer errors
 - **Use a short USB cable** (under 1 meter). Long cables are the most common cause of read/write errors.
 - Power cycle the device and re-enter Maskrom mode
-- If the device becomes unresponsive ("wedged"), a full power cycle is required — unplug AC power completely, wait 5 seconds, then re-enter Maskrom
+- If the device becomes unresponsive ("wedged"), a full power cycle is required - unplug AC power completely, wait 5 seconds, then re-enter Maskrom
 - Use `-v` flag to see detailed USB protocol logging
 
 ### Windows / macOS
@@ -425,5 +425,5 @@ MIT
 
 ## Links
 
-- [Battle With Bytes](https://www.battlewithbytes.io) — project blog
-- [Rockchip RK3399 TRM](https://opensource.rock-chips.com/wiki_RK3399) — technical reference
+- [Battle With Bytes](https://www.battlewithbytes.io) - project blog
+- [Rockchip RK3399 TRM](https://opensource.rock-chips.com/wiki_RK3399) - technical reference
