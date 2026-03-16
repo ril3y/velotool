@@ -28,6 +28,8 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 - Progress bars with transfer rates
 - Cross-platform: Linux (x86_64/ARM64), Windows, macOS
 
+> **Tested on Linux ARM64 (Raspberry Pi).** Windows and macOS builds are provided but have not been tested against hardware. If you run into issues on those platforms, please [open an issue](../../issues).
+
 ## Hardware
 
 | Component | Details |
@@ -44,9 +46,10 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 
 ### Prerequisites
 
-- USB cable connected between the VeloCore board and your computer
+- **Short** USB cable (under 1 meter) connected between the VeloCore board and your computer
 - Device in **Maskrom mode** (hold recovery button, press reset, hold 5 seconds)
-- On Windows: [WinUSB driver](https://zadig.akeo.ie/) installed via Zadig for the Rockchip device
+- On Windows: [WinUSB driver](https://zadig.akeo.ie/) installed via Zadig for the Rockchip device (**untested**)
+- On macOS: `libusb` via Homebrew (**untested**)
 - On Linux: `libusb-1.0` development headers (`apt install libusb-1.0-0-dev`)
 
 ### Install
@@ -304,7 +307,7 @@ To flash or read the VeloCore's eMMC, the RK3399 must be in **Maskrom mode**. Th
 
 ### What You Need
 
-- A USB-A to USB-A cable (or USB-A to USB-C depending on your board revision)
+- A **short** USB-A to USB-A cable (or USB-A to USB-C depending on your board revision) — **under 1 meter recommended**. Long cables cause transfer errors.
 - Access to the RK3399 board inside the bike's console housing
 - A computer running velotool (Raspberry Pi works great for a dedicated flash station)
 
@@ -351,7 +354,7 @@ Bus 001 Device 005: ID 2207:330c Fuzhou Rockchip Electronics Company RK3399 in M
 
 ### Tips
 
-- If `velotool detect` shows nothing, try a different USB cable — some cables are charge-only
+- If `velotool detect` shows nothing, try a different USB cable — some cables are charge-only, and long cables cause unreliable transfers
 - On Linux, you may need `sudo` or a udev rule for USB access
 - On Windows, install the **WinUSB** driver via [Zadig](https://zadig.akeo.ie/) for the "Rockchip" device
 - If the device becomes unresponsive after a failed transfer, **unplug power completely**, wait 5 seconds, then repeat the Maskrom entry procedure
@@ -373,9 +376,16 @@ Bus 001 Device 005: ID 2207:330c Fuzhou Rockchip Electronics Company RK3399 in M
 - On Windows: install WinUSB driver via Zadig
 
 ### Transfer errors
+- **Use a short USB cable** (under 1 meter). Long cables are the most common cause of read/write errors.
 - Power cycle the device and re-enter Maskrom mode
-- If the device becomes unresponsive ("wedged"), a full power cycle is required
+- If the device becomes unresponsive ("wedged"), a full power cycle is required — unplug AC power completely, wait 5 seconds, then re-enter Maskrom
 - Use `-v` flag to see detailed USB protocol logging
+
+### Windows / macOS
+- These platforms build from CI but have **not been tested against hardware**
+- On Windows, the [WinUSB driver](https://zadig.akeo.ie/) must be installed via Zadig before velotool can see the device
+- On macOS, you may need to allow the USB device in System Settings > Privacy & Security
+- If you get these working, please report your experience in an [issue](../../issues)
 
 ### Build errors
 - Ensure `libusb-1.0` development headers are installed
