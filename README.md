@@ -46,7 +46,8 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 
 ### Prerequisites
 
-- **Short** USB cable (under 1 meter) connected between the VeloCore board and your computer
+- Back cover of the VeloCore console removed to access the RK3399 board's **micro USB OTG port** — this is the only USB port that supports flashing. The external USB ports on the bike cannot be used.
+- **Short** USB cable (under 1 meter) connected between the board's micro USB OTG port and your computer
 - Device in **Maskrom mode** (hold recovery button, press reset, hold 5 seconds)
 - On Windows: [WinUSB driver](https://zadig.akeo.ie/) installed via Zadig for the Rockchip device (**untested**)
 - On macOS: `libusb` via Homebrew (**untested**)
@@ -307,8 +308,8 @@ To flash or read the VeloCore's eMMC, the RK3399 must be in **Maskrom mode**. Th
 
 ### What You Need
 
-- A **short** USB-A to USB-A cable (or USB-A to USB-C depending on your board revision) — **under 1 meter recommended**. Long cables cause transfer errors.
-- Access to the RK3399 board inside the bike's console housing
+- A **short** USB-A to micro USB cable — **under 1 meter recommended**. Long cables cause transfer errors.
+- Access to the RK3399 board inside the bike's console housing (back cover removed)
 - A computer running velotool (Raspberry Pi works great for a dedicated flash station)
 
 ### Opening the Console
@@ -316,7 +317,7 @@ To flash or read the VeloCore's eMMC, the RK3399 must be in **Maskrom mode**. Th
 1. Power off the bike and unplug it
 2. Remove the rear cover of the touchscreen console (4-6 screws depending on revision)
 3. Locate the RK3399 board — it's the main board behind the display
-4. Identify the **USB OTG port** (used for flashing) and the **reset/recovery buttons**
+4. Identify the **micro USB OTG port** (used for flashing — the external USB ports on the bike will not work) and the **reset/recovery buttons**
 
 ### Board Layout
 
@@ -326,7 +327,7 @@ The photo above shows the VeloCore's RK3399 board with the console cover removed
 
 ### Entering Maskrom
 
-1. **Connect USB** between the VeloCore's OTG port and your computer
+1. **Connect USB** between the board's micro USB OTG port and your computer
 2. **Hold the recovery button** (bottom circle in the photo above)
 3. While still holding recovery, **press and release the reset button** (top circle), or plug in the bike's power
 4. **Continue holding recovery for ~5 seconds**, then release
