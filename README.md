@@ -24,7 +24,7 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 - Knows all 28 VeloCore partitions by name
 - Reliable 64 KB chunked transfers with automatic retry
 - Full device backup with SHA-256 verification
-- Batch flash from a directory of partition images
+- Multi-partition flash via manifest file
 - Progress bars with transfer rates
 - Cross-platform: Linux (x86_64/ARM64), Windows, macOS
 
@@ -74,7 +74,7 @@ velotool detect
 velotool read uboot_b uboot_backup.img
 
 # Flash a partition
-velotool flash uboot_b uboot_patched.img
+velotool flash uboot_b uboot_b.img
 
 # Full device backup
 velotool backup ./my_backup/
@@ -119,8 +119,8 @@ velotool read --lba 0x6000 --sectors 8192 dump.img dummy
 Writes a local image file to an eMMC partition. Validates file size against partition boundaries.
 
 ```bash
-velotool flash uboot_b uboot_patched.img
-velotool flash vbmeta_b vbmeta_stock_flags2.img -y   # skip confirmation
+velotool flash uboot_b uboot_b.img
+velotool flash vbmeta_b vbmeta_b.img -y   # skip confirmation
 ```
 
 ### `flash-all` — Multi-Partition Flash
