@@ -36,7 +36,7 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 
 - Back cover of the VeloCore console removed to access the RK3399 board's **micro USB OTG port** — this is the only USB port that supports flashing. The external USB ports on the bike cannot be used.
 - **Short** USB cable (under 1 meter) connected between the board's micro USB OTG port and your computer
-- Device in **Maskrom mode** (hold recovery button, press reset, hold 5 seconds)
+- Device in **[Maskrom mode](#entering-maskrom-mode)**
 - On Windows: [WinUSB driver](https://zadig.akeo.ie/) installed via Zadig for the Rockchip device (**untested**)
 - On macOS: `libusb` via Homebrew (**untested**)
 - On Linux: `libusb-1.0` development headers (`apt install libusb-1.0-0-dev`)
