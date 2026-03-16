@@ -17,10 +17,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var skipUserdata bool
+var skipPartitions []string
 
 func init() {
-	backupCmd.Flags().BoolVar(&skipUserdata, "skip-userdata", false, "Skip the large userdata partition (~12 GB)")
+	backupCmd.Flags().StringSliceVar(&skipPartitions, "skip", nil, "Comma-separated list of partitions to skip (e.g. --skip userdata,oem_a,oem_b)")
 	rootCmd.AddCommand(backupCmd)
 }
 
@@ -51,10 +51,10 @@ available, falls back to the embedded partition table. Each partition is
 dumped with a SHA256 checksum. A JSON manifest and checksums.sha256 file
 are written at the end.
 
-Use --skip-userdata to skip the ~12 GB userdata partition (F2FS) which
-is usually not needed for firmware restoration.`,
+Use --skip to exclude specific partitions by name (comma-separated).`,
 	Example: `  velotool backup ./my_backup/
-  velotool backup ./my_backup/ --skip-userdata
+  velotool backup ./my_backup/ --skip userdata
+  velotool backup ./my_backup/ --skip userdata,oem_a,oem_b,sw_release
   velotool backup ./my_backup/ -y`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -110,11 +110,17 @@ is usually not needed for firmware restoration.`,
 			parts = partitions.VeloCore
 		}
 
+		// Build skip set from --skip flag.
+		skipSet := make(map[string]bool)
+		for _, name := range skipPartitions {
+			skipSet[strings.TrimSpace(strings.ToLower(name))] = true
+		}
+
 		// Calculate total size needed and filter skipped partitions.
 		var totalNeeded uint64
 		var dumpParts []partitions.Partition
 		for _, p := range parts {
-			if skipUserdata && p.Name == "userdata" {
+			if skipSet[strings.ToLower(p.Name)] {
 				continue
 			}
 			dumpParts = append(dumpParts, p)
@@ -155,8 +161,8 @@ is usually not needed for firmware restoration.`,
 			dim("Dump    "),
 			len(dumpParts), len(parts),
 			func() string {
-				if skipUserdata {
-					return ", userdata skipped"
+				if len(skipSet) > 0 {
+					return fmt.Sprintf(", %d skipped", len(skipSet))
 				}
 				return ""
 			}())
@@ -179,7 +185,7 @@ is usually not needed for firmware restoration.`,
 		startTime := time.Now()
 
 		for i, p := range parts {
-			if skipUserdata && p.Name == "userdata" {
+			if skipSet[strings.ToLower(p.Name)] {
 				fmt.Printf("\n  %s %s %s\n",
 					dim(fmt.Sprintf("[%d/%d]", i+1, total)),
 					yellow("Skipping"),

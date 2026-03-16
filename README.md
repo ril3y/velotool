@@ -146,7 +146,8 @@ Dumps every partition to individual `.img` files with SHA-256 checksums.
 
 ```bash
 velotool backup ./velocore_backup/
-velotool backup ./velocore_backup/ --skip-userdata   # skip 12 GB userdata
+velotool backup ./velocore_backup/ --skip userdata              # skip 12 GB userdata
+velotool backup ./velocore_backup/ --skip userdata,oem_a,oem_b  # skip multiple
 ```
 
 Generates:
