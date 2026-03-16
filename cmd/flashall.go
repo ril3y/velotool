@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ril3y/velotool/pkg/partitions"
 	"github.com/ril3y/velotool/pkg/rockusb"
@@ -15,53 +17,62 @@ func init() {
 	rootCmd.AddCommand(flashAllCmd)
 }
 
+type flashEntry struct {
+	partition partitions.Partition
+	path      string
+	filename  string
+	size      int64
+}
+
 var flashAllCmd = &cobra.Command{
-	Use:   "flash-all <profile> <dir>",
-	Short: "Flash a predefined set of partition images",
-	Long: `Flash multiple partition images from a directory using a named profile.
+	Use:   "flash-all <manifest>",
+	Short: "Flash multiple partitions from a manifest file",
+	Long: `Flash multiple partition images in sequence using a manifest file.
 
-Each profile defines which partitions to flash and which image files to use.
-All image files are verified to exist before any writes begin.
+The manifest is a text file with one entry per line:
 
-Available profiles:
-  root-stack      Flash patched U-Boot + rooted system/vendor (slot B)
-  stock-restore   Restore all slot B partitions to stock
-  full-root       Full root stack including boot and vbmeta`,
-	Example: `  velotool flash-all root-stack ./images/
-  velotool flash-all stock-restore ./stock_backup/ -y`,
-	Args: cobra.ExactArgs(2),
+    <partition_name>  <image_file>
+
+Blank lines and lines starting with # are ignored. Image file paths are
+resolved relative to the directory containing the manifest file.
+
+All entries are validated (partition names and file existence) before any
+writes begin.`,
+	Example: `  # Create a manifest file (flash.txt):
+  #
+  #   uboot_b   uboot_b_patched.img
+  #   system_b  system_b.img
+  #   vendor_b  vendor_b.img
+  #
+  # Then flash everything:
+  velotool flash-all flash.txt
+  velotool flash-all flash.txt -y   # skip confirmation`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		profileName := args[0]
-		dir := args[1]
+		manifestPath := args[0]
 
-		entries, err := partitions.LookupProfile(profileName)
+		// Parse manifest file.
+		entries, err := parseManifest(manifestPath)
 		if err != nil {
-			// Show available profiles on error.
-			fmt.Printf("\n%s\n", bold("Available profiles:"))
-			for name, ents := range partitions.Profiles {
-				fmt.Printf("  %-16s %d partitions\n", cyan(name), len(ents))
-			}
 			return err
 		}
 
-		// Verify all files exist before starting.
-		fmt.Printf("Profile: %s (%d partitions)\n\n", bold(profileName), len(entries))
-		for _, e := range entries {
-			path := filepath.Join(dir, e.Filename)
-			fi, err := os.Stat(path)
-			if err != nil {
-				return fmt.Errorf("missing image: %s", red(path))
-			}
-			part, err := partitions.Lookup(e.Partition)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("  %s → %s (%s, LBA 0x%x)\n",
-				e.Filename, cyan(e.Partition), dim(formatBytes(fi.Size())), part.StartLBA)
+		if len(entries) == 0 {
+			fmt.Println()
+			fmt.Printf("  %s No entries found in %s\n", red("✗"), manifestPath)
+			fmt.Println()
+			return nil
 		}
 
-		if !confirm(fmt.Sprintf("\nFlash %d partitions?", len(entries))) {
-			fmt.Println("Aborted.")
+		fmt.Printf("\n  %s\n\n", boldCyan("Flash All — "+filepath.Base(manifestPath)))
+
+		for _, e := range entries {
+			fmt.Printf("  %s → %s (%s, LBA 0x%x)\n",
+				e.filename, cyan(e.partition.Name), dim(formatBytes(e.size)), e.partition.StartLBA)
+		}
+
+		if !confirm(fmt.Sprintf("\n  Flash %d partitions?", len(entries))) {
+			fmt.Println("  Aborted.")
 			return nil
 		}
 
@@ -73,25 +84,20 @@ Available profiles:
 		defer dev.Close()
 
 		for i, e := range entries {
-			part, _ := partitions.Lookup(e.Partition)
-			path := filepath.Join(dir, e.Filename)
-
-			f, err := os.Open(path)
+			f, err := os.Open(e.path)
 			if err != nil {
-				return fmt.Errorf("open %s: %w", e.Filename, err)
+				return fmt.Errorf("open %s: %w", e.filename, err)
 			}
 
-			fi, _ := f.Stat()
-			fileSize := fi.Size()
-			fileSectors := uint64((fileSize + rockusb.SectorSize - 1) / rockusb.SectorSize)
+			fileSectors := uint64((e.size + rockusb.SectorSize - 1) / rockusb.SectorSize)
 
 			fmt.Printf("\n  %s %s → %s\n",
 				bold(fmt.Sprintf("[%d/%d]", i+1, len(entries))),
-				e.Filename, cyan(e.Partition))
+				e.filename, cyan(e.partition.Name))
 
 			bar := progressbar.NewOptions64(
-				fileSize,
-				progressbar.OptionSetDescription(fmt.Sprintf("    %s", e.Partition)),
+				e.size,
+				progressbar.OptionSetDescription(fmt.Sprintf("    %s", e.partition.Name)),
 				progressbar.OptionSetWidth(30),
 				progressbar.OptionShowBytes(true),
 				progressbar.OptionSetTheme(progressbar.Theme{
@@ -109,15 +115,80 @@ Available profiles:
 				bar.Set64(current)
 			}
 
-			if err := dev.WriteFromReader(f, part.StartLBA, fileSectors, cfg); err != nil {
+			if err := dev.WriteFromReader(f, e.partition.StartLBA, fileSectors, cfg); err != nil {
 				f.Close()
-				return fmt.Errorf("flash %s: %w", e.Partition, err)
+				return fmt.Errorf("flash %s: %w", e.partition.Name, err)
 			}
 			f.Close()
 			bar.Finish()
 		}
 
-		fmt.Printf("\n%s All %d partitions flashed.\n", green("OK"), len(entries))
+		fmt.Printf("\n  %s All %d partitions flashed.\n\n", green("✓"), len(entries))
 		return nil
 	},
+}
+
+// parseManifest reads a flash manifest file and validates all entries.
+// Each line: <partition_name> <image_file>
+// Blank lines and lines starting with # are ignored.
+// Image paths are resolved relative to the manifest file's directory.
+func parseManifest(path string) ([]flashEntry, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open manifest: %w", err)
+	}
+	defer f.Close()
+
+	baseDir := filepath.Dir(path)
+	var entries []flashEntry
+
+	scanner := bufio.NewScanner(f)
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip blank lines and comments.
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			return nil, fmt.Errorf("%s:%d: expected '<partition> <image_file>', got: %s", path, lineNum, line)
+		}
+
+		partName := fields[0]
+		imgFile := fields[1]
+
+		// Validate partition name.
+		part, err := partitions.Lookup(partName)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%d: %w", path, lineNum, err)
+		}
+
+		// Resolve image path relative to manifest directory.
+		imgPath := imgFile
+		if !filepath.IsAbs(imgPath) {
+			imgPath = filepath.Join(baseDir, imgFile)
+		}
+
+		fi, err := os.Stat(imgPath)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%d: image not found: %s", path, lineNum, imgPath)
+		}
+
+		entries = append(entries, flashEntry{
+			partition: *part,
+			path:      imgPath,
+			filename:  imgFile,
+			size:      fi.Size(),
+		})
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read manifest: %w", err)
+	}
+
+	return entries, nil
 }

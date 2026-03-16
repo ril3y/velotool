@@ -15,7 +15,7 @@ Reads, writes, and backs up eMMC partitions over USB using the Rockchip maskrom/
 
 ## Why velotool?
 
-The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official tools (`rkdeveloptool`, `rkflashtool`) work but require manual multi-step workflows, have no partition name resolution, no progress bars, and no backup capability. The VeloCore's loader also crashes on large reads, requiring careful chunking.
+The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official tools (`rkdeveloptool`, `rkflashtool`) work but require manual multi-step workflows, have no partition name resolution, no progress bars, and no backup capability.
 
 **velotool** solves all of this in a single binary:
 
@@ -24,7 +24,7 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 - Knows all 28 VeloCore partitions by name
 - Reliable 64 KB chunked transfers with automatic retry
 - Full device backup with SHA-256 verification
-- Flash profiles for common operations (root, stock restore)
+- Batch flash from a directory of partition images
 - Progress bars with transfer rates
 - Cross-platform: Linux (x86_64/ARM64), Windows, macOS
 
@@ -125,20 +125,25 @@ velotool flash vbmeta_b vbmeta_stock_flags2.img -y   # skip confirmation
 
 ### `flash-all` — Multi-Partition Flash
 
-Flashes a predefined set of partitions from a directory of image files.
+Flashes multiple partitions in sequence using a manifest file. The manifest is a plain text file with one entry per line — partition name and image file, separated by whitespace. Blank lines and lines starting with `#` are ignored.
 
-```bash
-velotool flash-all root-stack ./images/
-velotool flash-all stock-restore ./stock_backup/ -y
+**Example manifest** (`flash.txt`):
+
+```
+# VeloCore flash manifest
+# <partition>   <image_file>
+
+uboot_b         uboot_b.img
+system_b        system_b.img
+vendor_b        vendor_b.img
 ```
 
-**Available profiles:**
+```bash
+velotool flash-all flash.txt
+velotool flash-all flash.txt -y   # skip confirmation
+```
 
-| Profile | Partitions | Description |
-|---------|-----------|-------------|
-| `root-stack` | uboot_a, uboot_b, system_b, vendor_b | Quick root (AVB skip + rooted system) |
-| `stock-restore` | uboot_a, uboot_b, vbmeta_b, system_b, vendor_b | Full stock recovery |
-| `full-root` | uboot_a, uboot_b, vbmeta_b, boot_b, system_b, vendor_b | Complete root with AVB disabled |
+Image paths are resolved relative to the manifest file's directory, so you can keep the manifest alongside the images. All entries are validated (partition names and file existence) before any writes begin.
 
 ### `backup` — Full Device Backup
 
@@ -387,7 +392,7 @@ velotool/
 │   ├── detect.go                        # USB device discovery
 │   ├── read.go                          # Read partition to file
 │   ├── flash.go                         # Write file to partition
-│   ├── flash-all.go                     # Multi-partition flash profiles
+│   ├── flash-all.go                     # Multi-partition flash from manifest
 │   ├── backup.go                        # Full device backup + checksums
 │   ├── partitions.go                    # Partition table + live scan
 │   ├── scan.go                          # Alias for partitions
@@ -407,7 +412,7 @@ velotool/
 │   ├── gpt/
 │   │   └── gpt.go                       # GPT header + entry parser
 │   └── partitions/
-│       └── velocore.go                  # Embedded partition table + profiles
+│       └── velocore.go                  # Embedded partition table
 ├── assets/
 │   └── rk3399_loader_v1.30.130.bin      # Rockchip DDR loader
 ├── Makefile                             # Cross-compilation targets

@@ -65,37 +65,6 @@ var VeloCore = []Partition{
 	{"userdata", 0x2304400, 0x1739bdf},
 }
 
-// FlashEntry describes a partition + filename pair for flash-all profiles.
-type FlashEntry struct {
-	Partition string
-	Filename  string
-}
-
-// Profiles defines predefined flash sets for flash-all command.
-var Profiles = map[string][]FlashEntry{
-	"root-stack": {
-		{"uboot_a", "uboot_a_avbskip.img"},
-		{"uboot_b", "uboot_a_avbskip.img"},
-		{"system_b", "system_b_rooted_gold.img"},
-		{"vendor_b", "vendor_b_permissive.img"},
-	},
-	"stock-restore": {
-		{"uboot_a", "uboot_a_original.img"},
-		{"uboot_b", "uboot_b_original.img"},
-		{"vbmeta_b", "vbmeta_b_original.img"},
-		{"system_b", "system_b.img"},
-		{"vendor_b", "vendor_b.img"},
-	},
-	"full-root": {
-		{"uboot_a", "uboot_a_avbskip.img"},
-		{"uboot_b", "uboot_a_avbskip.img"},
-		{"vbmeta_b", "vbmeta_b_stock_flags2.img"},
-		{"boot_b", "boot_b_rooted.img"},
-		{"system_b", "system_b_rooted_gold.img"},
-		{"vendor_b", "vendor_b_permissive.img"},
-	},
-}
-
 // Lookup finds a partition by name (case-insensitive).
 func Lookup(name string) (*Partition, error) {
 	lower := strings.ToLower(name)
@@ -105,19 +74,4 @@ func Lookup(name string) (*Partition, error) {
 		}
 	}
 	return nil, fmt.Errorf("unknown partition: %q (use 'velotool partitions' to list)", name)
-}
-
-// LookupProfile finds a flash profile by name (case-insensitive).
-func LookupProfile(name string) ([]FlashEntry, error) {
-	lower := strings.ToLower(name)
-	for k, v := range Profiles {
-		if strings.ToLower(k) == lower {
-			return v, nil
-		}
-	}
-	names := make([]string, 0, len(Profiles))
-	for k := range Profiles {
-		names = append(names, k)
-	}
-	return nil, fmt.Errorf("unknown profile: %q (available: %s)", name, strings.Join(names, ", "))
 }
