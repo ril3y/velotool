@@ -182,7 +182,7 @@ Triggers normal boot: BootROM → loader → U-Boot → Android.
 
 ## Partition Layout
 
-The VeloCore uses A/B slots for seamless updates. Slot B is typically active.
+The VeloCore has A/B partition slots, though it always boots from **Slot B** in practice. Slot A contains a vanilla Rockchip/Google system with no Nautilus apps — it exists as a fallback but the device never switches to it during normal operation.
 
 | Partition | Start LBA | Size | Description |
 |-----------|-----------|------|-------------|
