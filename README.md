@@ -30,18 +30,6 @@ The VeloCore runs Android 9 on an RK3399 with a 29 GB eMMC. Rockchip's official 
 
 > **Tested on Linux ARM64 (Raspberry Pi).** Windows and macOS builds are provided but have not been tested against hardware. If you run into issues on those platforms, please [open an issue](../../issues).
 
-## Hardware
-
-| Component | Details |
-|-----------|---------|
-| SoC | Rockchip RK3399 (dual Cortex-A72 + quad Cortex-A53) |
-| RAM | 2 GB LPDDR3 |
-| eMMC | 29.1 GB DA4032 (HS200) |
-| Display | 1920x1080 eDP via PTN3460 bridge |
-| WiFi | BCM43455 (AP6255) |
-| Touch | ILITEK USB HID |
-| Android | 9.0 (kernel 4.4.167) |
-
 ## Quick Start
 
 ### Prerequisites
