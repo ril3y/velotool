@@ -309,11 +309,17 @@ To flash or read the VeloCore's eMMC, the RK3399 must be in **Maskrom mode**. Th
 3. Locate the RK3399 board — it's the main board behind the display
 4. Identify the **USB OTG port** (used for flashing) and the **reset/recovery buttons**
 
+### Board Layout
+
+![VeloCore RK3399 board with reset and recovery buttons circled](maskrom.jpg)
+
+The photo above shows the VeloCore's RK3399 board with the console cover removed. The **reset button** (top circle) and **recovery button** (bottom circle) are the two small tactile switches used to enter Maskrom mode.
+
 ### Entering Maskrom
 
 1. **Connect USB** between the VeloCore's OTG port and your computer
-2. **Hold the recovery button** on the RK3399 board (small tactile button, often labeled "REC" or "RECOVER")
-3. While still holding recovery, **plug in the bike's power** (or press the reset button if the board has one)
+2. **Hold the recovery button** (bottom circle in the photo above)
+3. While still holding recovery, **press and release the reset button** (top circle), or plug in the bike's power
 4. **Continue holding recovery for ~5 seconds**, then release
 5. The board is now in Maskrom mode — the display will remain blank (no boot)
 
