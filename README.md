@@ -479,6 +479,10 @@ velotool/
 
 MIT
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ril3y/velotool&type=Date)](https://star-history.com/#ril3y/velotool&Date)
+
 ## Links
 
 - [Battle With Bytes](https://www.battlewithbytes.io) - project blog
