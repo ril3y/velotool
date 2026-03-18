@@ -87,32 +87,102 @@ $ velotool detect
   ✓ RK3399 (Maskrom)
   ┌──────────────────────────────────
   │  Mode     Maskrom
-  │  USB      Bus 1, Address 5
-  │  PID      0x330c
+  │  USB      Bus 1, Address 16
+  │  PID      0x33333063
   └──────────────────────────────────
 ```
 
 If the device is in Maskrom mode, velotool automatically downloads the embedded DDR loader before any read/write operation. No manual step required.
 
-### `read` - Read Partition
+### `partitions` / `scan` - Partition Table & Live Scan
 
-Reads an eMMC partition to a local file.
+Lists all 28 VeloCore partitions with LBA offsets and sizes. When a device is connected, performs live analysis by reading partition headers. Use `--no-scan` to show the table without a device.
+
+```
+$ velotool partitions
+
+  VeloCore RK3399 — eMMC Partition Table
+  29.1 GB DA4032 (HS200)
+
+  ⟳ Maskrom mode — sending DDR loader...
+  NAME              START LBA     SIZE
+  ──────────────────────────────────────────
+  ▪ uboot_a         0x4000        4 MB
+  ▪ uboot_b         0x6000        4 MB
+  ▪ trust_a         0x8000        4 MB
+  ▪ trust_b         0xa000        4 MB
+  ▪ misc            0xc000        4 MB
+  ▪ resource        0xe000        16 MB
+  ▪ kernel          0x16000       32 MB
+  ▪ dtb             0x26000       4 MB
+  ▪ dtbo_a          0x28000       4 MB
+  ▪ dtbo_b          0x2a000       4 MB
+  ▪ vbmeta_a        0x2c000       1 MB
+  ▪ vbmeta_b        0x2c800       1 MB
+  ▪ boot_a          0x2d000       64 MB
+  ▪ boot_b          0x4d000       64 MB
+  ▪ backup          0x6d000       112 MB
+  ▪ security        0xa5000       4 MB
+  ▪ cache           0xa7000       512 MB
+  ▪ system_a        0x1a7000      2.5 GB
+  ▪ system_b        0x6a7000      2.5 GB
+  ▪ metadata        0xba7000      16 MB
+  ▪ vendor_a        0xbaf000      512 MB
+  ▪ vendor_b        0xcaf000      512 MB
+  ▪ oem_a           0xdaf000      512 MB
+  ▪ oem_b           0xeaf000      512 MB
+  ▪ frp             0xfaf000      512 KB
+  ▪ sw_release      0xfaf400      7.4 GB
+  ▪ video           0x1e86400     2.2 GB
+  ▪ userdata        0x2304400     11.6 GB
+
+  28 partitions  ▪ = slot A  ▪ = slot B
+```
+
+`scan` is an alias for `partitions`. Use `--no-scan` to print the table without connecting to a device:
 
 ```bash
-# By partition name
-velotool read vbmeta_b vbmeta_backup.img
+velotool partitions --no-scan
+```
 
-# By raw LBA offset
+Live scan identifies:
+- **Filesystem types**: ext4, F2FS, squashfs, Android sparse
+- **Image formats**: AVB, Android boot, Rockchip loader, BL31 trust, FIT/DTB
+- **Security**: LUKS encryption detection
+- **Entropy analysis**: Shannon entropy per partition (detects encryption/compression)
+
+### `read` - Read Partition
+
+Reads an eMMC partition to a local file. Data is read in 64 KB chunks (128 sectors) with a progress bar.
+
+```
+$ velotool read vbmeta_b vbmeta_backup.img
+
+  Partition  vbmeta_b
+  LBA        0x2c800 (1 MB)
+  Read       2048 sectors (1.0 MB)
+  Output     vbmeta_backup.img
+
+  ⟳ Maskrom mode — sending DDR loader...
+  ✓ Loader active — Loader mode
+  Reading ███████████████████████████████████ 100% | 1.0 MB @ 256 KB/s
+  ✓ Done — vbmeta_backup.img (1.0 MB)
+```
+
+You can also read by raw LBA offset:
+
+```bash
 velotool read --lba 0x6000 --sectors 8192 dump.img dummy
 ```
 
 ### `flash` - Write Partition
 
-Writes a local image file to an eMMC partition. Validates file size against partition boundaries.
+Writes a local image file to an eMMC partition. Validates file size against partition boundaries. Prompts for confirmation unless `-y` is passed.
 
 ```bash
 velotool flash uboot_b uboot_b.img
 velotool flash vbmeta_b vbmeta_b.img -y   # skip confirmation
+velotool flash --lba 0x6000 custom_uboot.img dummy  # by raw LBA offset
 ```
 
 ### `flash-all` - Multi-Partition Flash
@@ -125,7 +195,7 @@ Flashes multiple partitions in sequence using a manifest file. The manifest is a
 # VeloCore flash manifest
 # <partition>   <image_file>
 
-uboot_b         uboot_b.img
+uboot_b         uboot_b_patched.img
 system_b        system_b.img
 vendor_b        vendor_b.img
 ```
@@ -139,12 +209,12 @@ Image paths are resolved relative to the manifest file's directory, so you can k
 
 ### `backup` - Full Device Backup
 
-Dumps every partition to individual `.img` files with SHA-256 checksums.
+Dumps every partition to individual `.img` files with SHA-256 checksums. Attempts to read the GPT from the device first; falls back to the embedded partition table if unavailable.
 
 ```bash
 velotool backup ./velocore_backup/
-velotool backup ./velocore_backup/ --skip userdata              # skip 12 GB userdata
-velotool backup ./velocore_backup/ --skip userdata,oem_a,oem_b  # skip multiple
+velotool backup ./velocore_backup/ --skip-userdata   # skip the ~12 GB userdata partition
+velotool backup ./velocore_backup/ -y                # skip confirmation
 ```
 
 Generates:
@@ -154,28 +224,13 @@ Generates:
 
 Checks free disk space before starting and refuses if there isn't enough room.
 
-### `partitions` - Partition Table & Live Scan
-
-Lists all 28 VeloCore partitions. When a device is connected, performs live analysis:
-
-```bash
-velotool partitions          # scan device + show table
-velotool partitions --no-scan  # table only, no device needed
-```
-
-Live scan identifies:
-- **Filesystem types**: ext4, F2FS, squashfs, Android sparse
-- **Image formats**: AVB, Android boot, Rockchip loader, BL31 trust, FIT/DTB
-- **Security**: LUKS encryption detection
-- **Entropy analysis**: Shannon entropy per partition (detects encryption/compression)
-
 ### `reset` - Reboot Device
 
 ```bash
 velotool reset
 ```
 
-Triggers normal boot: BootROM → loader → U-Boot → Android.
+Triggers normal boot: BootROM -> loader -> U-Boot -> Android.
 
 ## Partition Layout
 
