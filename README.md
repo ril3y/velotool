@@ -165,8 +165,8 @@ $ velotool read vbmeta_b vbmeta_backup.img
 
   ⟳ Maskrom mode — sending DDR loader...
   ✓ Loader active — Loader mode
-  Reading ███████████████████████████████████ 100% | 1.0 MB @ 256 KB/s
-  ✓ Done — vbmeta_backup.img (1.0 MB)
+  Reading ╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸ 1.0 MB/1.0 MB
+  ✓ vbmeta_b → vbmeta_backup.img
 ```
 
 You can also read by raw LBA offset:
@@ -264,8 +264,8 @@ The VeloCore has A/B partition slots, though it always boots from **Slot B** in 
 | oem_a | 0xdaf000 | 512 MB | OEM partition (slot A) |
 | oem_b | 0xeaf000 | 512 MB | OEM partition (slot B) |
 | frp | 0xfaf000 | 512 KB | Factory Reset Protection |
-| sw_release | 0xfaf400 | 1.9 GB | Software release |
-| video | 0x1e86400 | 1.1 GB | Video firmware |
+| sw_release | 0xfaf400 | 7.3 GB | Software release |
+| video | 0x1e86400 | 2.2 GB | Video firmware |
 | userdata | 0x2304400 | 11.6 GB | User data (F2FS) |
 
 ## How It Works
