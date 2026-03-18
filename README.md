@@ -1,5 +1,7 @@
 # velotool
 
+[![GitHub stars](https://img.shields.io/github/stars/ril3y/velotool?style=social)](https://github.com/ril3y/velotool/stargazers)
+
 A cross-platform USB flash tool for the **Bowflex VeloCore** indoor cycling bike, built around the Rockchip RK3399 SoC.
 
 Reads, writes, and backs up eMMC partitions over USB using the Rockchip maskrom/loader protocol. The DDR loader binary is embedded - just plug in USB and go.
